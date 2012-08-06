@@ -5,6 +5,7 @@
 #include "list.h"
 
 typedef void (*sc_func_t)(void);
+typedef void *(load_lib_func_t)(const char *, int);
 
 typedef struct {
 	int refcount;
@@ -45,11 +46,11 @@ typedef struct {
 	Elf32_Word n_preinit_func;
 	sc_func_t *preinit_func_array;
 
+	load_lib_func_t *load_lib;
+
+	int constructed;
+
 	struct list_head list;
 }soinfo_t;
-
-int process_dyn_section(soinfo_t *si);
-
-int do_relocation(soinfo_t *si, Elf32_Rel *rel, uint32_t count);
 
 #endif

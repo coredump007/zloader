@@ -2,14 +2,13 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <elf.h>
-#include <pthread.h>
 #include <sys/mman.h>
 #include <string.h>
 
 #include "common.h"
 #include "debug.h"
-#include "loader.h"
 #include "link.h"
+#include "lib.h"
 
 struct libinfo {
 	int fd;
@@ -25,7 +24,6 @@ struct libinfo {
 	Elf32_Word load_bias;
 };
 
-static pthread_mutex_t dl_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static int check_elf_header(const Elf32_Ehdr* hdr)
 {
@@ -41,7 +39,7 @@ static int check_elf_header(const Elf32_Ehdr* hdr)
 	return 0;
 }
 
-static int open_library(struct libinfo *li, const char *name)
+static int open_lib(struct libinfo *li, const char *name)
 {
 	int r;
 
@@ -78,7 +76,7 @@ static int open_library(struct libinfo *li, const char *name)
 	return 0;
 }
 
-static void close_library(struct libinfo *li)
+static void close_lib(struct libinfo *li)
 {
 	D("Called.");
 
@@ -317,6 +315,7 @@ static soinfo_t *make_soinfo(struct libinfo *li)
 	si->load_bias = li->load_bias;
 	si->load_size = li->load_size;
 	si->n_phdr = li->ehdr.e_phnum;
+	si->constructed = 0;
 
 	for (i = 0; i < si->n_phdr; i++)
 		memcpy(&si->phdr[i], li->phdr[i], sizeof(Elf32_Phdr));
@@ -324,7 +323,7 @@ static soinfo_t *make_soinfo(struct libinfo *li)
 	return si;
 }
 
-static soinfo_t *load_library(const char *name)
+soinfo_t *load_library(const char *name, int flag)
 {
 	struct libinfo li;
 	soinfo_t *si;
@@ -333,7 +332,7 @@ static soinfo_t *load_library(const char *name)
 
 	D("Called.");
 
-	r = open_library(&li, name);
+	r = open_lib(&li, name);
 	if (r == -1) {
 		E("fail to open library.");
 		return NULL;
@@ -357,51 +356,14 @@ static soinfo_t *load_library(const char *name)
 		return NULL;
 	}
 
-	return si;
-}
-
-static soinfo_t *link_library(soinfo_t *si)
-{
-	int r;
-
-	D("Called.");
+	unmap_phdr(&li);
+	close_lib(&li);
 
 	r = link_image(si);
 	if (r) {
 		E("fail to link image.");
-
 		return NULL;
 	}
 
-	return si;
-}
-
-static soinfo_t *find_library(const char *name)
-{
-	soinfo_t *si;
-
-	D("Called.");
-
-	si = load_library(name);
-	if(si == NULL) {
-		E("fail to load library.");
-		return NULL;
-	}
-
-	return link_library(si);
-}
-
-void *loader_dlopen(const char *filename, int flag)
-{
-	soinfo_t *si;
-
-	D("Called.");
-
-	pthread_mutex_lock(&dl_lock);
-	si = find_library(filename);
-	if (si) {
-		si->refcount++;
-	}
-	pthread_mutex_unlock(&dl_lock);
 	return si;
 }
