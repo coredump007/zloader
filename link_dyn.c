@@ -26,13 +26,13 @@ int process_dyn_section(soinfo_t *si)
 	for (d = si->dyn_section; d->d_tag; d++) {
 		switch (d->d_tag) {
 			case DT_HASH:
-				D("DT_HASH.");
+				D("DT_HASH, d_ptr: 0x%x.", d->d_un.d_ptr);
 
 				si->hash_table = (Elf32_Word *)(si->load_bias + d->d_un.d_ptr);
 				si->nbucket = si->hash_table[0];
 				si->nchain = si->hash_table[1];
 				si->bucket = (Elf32_Word *)si->hash_table + 2;
-				si->chain = si->bucket + sizeof(Elf32_Word) * si->nbucket;
+				si->chain = si->bucket + si->nbucket;
 
 				break;
 

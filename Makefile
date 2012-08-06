@@ -6,7 +6,7 @@ all: build
 
 build: libloader.so libtest_loader.so test_loader
 
-libloader.so: loader.c link.c link_dyn.c link_reloc.c
+libloader.so: loader.c link.c link_dyn.c link_reloc.c debug.c
 	$(CC) $(CFLAGS) -o $@ $?
 
 libtest_loader.so: test_loader_so.c

@@ -16,6 +16,27 @@ static unsigned elfhash(const char *_name)
 	return h;
 }
 
+static void dump_hash_table(soinfo_t *si)
+{
+	int i;
+
+	DT(T_D_HASH, "si->hash_table: %p, si->nbucket: %u, si->nchain: %u,"
+			"si->bucket: %p, si->chain: %p.", si->hash_table,
+			si->nbucket, si->nchain, si->bucket, si->chain);
+
+	DT(T_D_HASH, "Bucket:");
+
+	for (i = 0; i < si->nbucket; i++)
+		DT(T_D_HASH, "bucket[%d]: %u.", i, si->bucket[i]);
+
+	DT(T_D_HASH, "Chain:");
+
+	for (i = 0; i < si->nchain; i++)
+		DT(T_D_HASH, "chain[%d]: %u.", i, si->chain[i]);
+
+	return;
+}
+
 static Elf32_Sym *do_sym_lookup(soinfo_t *si, const char *name)
 {
 	Elf32_Sym *symtab = si->symtab;
@@ -28,8 +49,18 @@ static Elf32_Sym *do_sym_lookup(soinfo_t *si, const char *name)
 
 	D("Called.");
 
+	if (D_TAG(T_D_HASH))
+		dump_hash_table(si);
+
+	DT(T_D_HASH, "name: %s.", name);
+	DT(T_D_HASH, "hash: %u.", hash);
+	DT(T_D_HASH, "bucket: %u.", hash % si->nbucket);
+
 	for(n = si->bucket[hash % si->nbucket]; n != 0; n = si->chain[n]){
 		s = symtab + n;
+
+		DT(T_D_HASH, "n: %u, string: %s.", n, strtab + s->st_name);
+
 		if(strcmp(strtab + s->st_name, name)) continue;
 		/* only concern ourselves with global and weak symbol definitions */
 		switch(ELF32_ST_BIND(s->st_info)){
@@ -56,8 +87,12 @@ static int do_sym_relocation(soinfo_t *si, uint32_t type, uint32_t sym_addr, uin
 	D("Called.");
 
 	switch (type) {
-//		case R_386_JUMP_SLOT:
-		case R_386_JMP_SLOT:
+#ifndef R_386_JUMP_SLOT
+#ifdef R_386_JMP_SLOT
+#define R_386_JUMP_SLOT R_386_JMP_SLOT
+#endif
+#endif
+		case R_386_JUMP_SLOT:
 			*dst = sym_addr;
 			break;
 

@@ -1,8 +1,6 @@
 #include <stdio.h>
 
-void foo(void)
+int foo(int a, int b)
 {
-	fprintf(stderr, "Hello foo.\n");
-
-	return;
+	return a + b;
 }

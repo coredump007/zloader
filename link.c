@@ -16,6 +16,8 @@ int relocate_image(soinfo_t *si)
 		}
 	}
 
+	D("Called.");
+
 	if (si->rel) {
 		r = do_relocation(si, si->rel, si->n_rel);
 		if (r) {
