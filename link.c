@@ -2,6 +2,8 @@
 #include "common.h"
 #include "link.h"
 
+struct load_lib_data *g_load_lib_data;
+
 int relocate_image(struct linkinfo *lki)
 {
 	int r = 0;
@@ -34,6 +36,11 @@ int link_image(struct linkinfo *lki)
 	int r;
 
 	D("Called.");
+
+	if (!g_load_lib_data) {
+		E("No library loading routines.");
+		return -1;
+	}
 
 	r = process_dyn_section(lki);
 	if (r) {

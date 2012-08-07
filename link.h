@@ -3,6 +3,13 @@
 
 #include "common.h"
 
+struct load_lib_data {
+	void *(*load_lib_func)(const char *, int);
+	int flag;
+};
+
+extern struct load_lib_data *g_load_lib_data;
+
 typedef void (*sc_func_t)(void);
 
 struct linkinfo {

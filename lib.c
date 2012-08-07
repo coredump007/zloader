@@ -6,10 +6,18 @@
 
 #include <elf.h>
 
+#include "list.h"
 #include "debug.h"
 #include "common.h"
 #include "load.h"
 #include "lib.h"
+
+static LIST_HEAD(g_lib_list);
+
+struct load_lib_data local_load_lib_data = {
+	.load_lib_func = load_library,
+	.flag = 0,
+};
 
 static int check_elf_header(const Elf32_Ehdr* hdr)
 {
@@ -124,7 +132,7 @@ static int make_linkinfo(struct libinfo *lib)
 	return 0;
 }
 
-struct libinfo *load_library(const char *name, int flag)
+void *load_library(const char *name, int flag)
 {
 	struct libinfo *lib;
 
@@ -156,11 +164,20 @@ struct libinfo *load_library(const char *name, int flag)
 		return NULL;
 	}
 
+	if (!g_load_lib_data)
+		g_load_lib_data = &local_load_lib_data;
+
+	local_load_lib_data.flag = flag;
+
 	r = link_image(&lib->link);
 	if (r) {
 		E("fail to link image.");
 		return NULL;
 	}
+
+	INIT_LIST_HEAD(&lib->list);
+
+	list_add_tail(&lib->list, &g_lib_list);
 
 	return lib;
 }
