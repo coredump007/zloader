@@ -35,7 +35,7 @@ void *load_library(const char *name, int flag)
 
 	r = locate_lib(name, path);
 	if (r) {
-		E("fail to locate library.");
+		E("fail to locate library: %s.", name);
 		return NULL;
 	}
 
@@ -66,6 +66,8 @@ void *load_library(const char *name, int flag)
 	INIT_LIST_HEAD(&lib->list);
 
 	list_add_tail(&lib->list, &g_lib_list);
+
+	D("Add library: %s", name);
 
 	return lib;
 }

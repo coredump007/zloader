@@ -2,10 +2,35 @@
 #include "common.h"
 #include "link.h"
 
+static char *g_excluded_lib_list[] = {
+	"libc.so.6",
+	NULL,
+};
+
+static int is_excluded_lib(const char *name)
+{
+	char *p = g_excluded_lib_list[0];
+	int i;
+
+	for (i = 0; *p; i++, p++) {
+		if (!strcmp(p, name))
+			return 1;
+	}
+
+	return 0;
+}
+
 int process_dyn_section(struct linkinfo *lki)
 {
+	struct load_lib_data *lld = g_load_lib_data;
+
 	const Elf32_Phdr* phdr;
 	const Elf32_Dyn *d;
+
+	int b_dt_needed = 0;
+
+	char *p;
+	void *m;
 	int i;
 
 	lki->dyn_section = NULL;
@@ -25,6 +50,10 @@ int process_dyn_section(struct linkinfo *lki)
 
 	for (d = lki->dyn_section; d->d_tag; d++) {
 		switch (d->d_tag) {
+			case DT_NEEDED:
+				b_dt_needed = 1;
+				break;
+
 			case DT_HASH:
 				D("DT_HASH, d_ptr: 0x%x.", d->d_un.d_ptr);
 
@@ -150,6 +179,28 @@ int process_dyn_section(struct linkinfo *lki)
 				D("DT_TEXTREL.");
 
 				break;
+		}
+	}
+
+	if (b_dt_needed) {
+		for (d = lki->dyn_section; d->d_tag; d++) {
+			if (d->d_tag == DT_NEEDED) {
+				if (!lld) {
+					E("load_lib_data is not initialized.");
+					return -1;
+				}
+
+				p = lki->strtab + d->d_un.d_ptr;
+
+				if (is_excluded_lib(p))
+					continue;
+
+				m = lld->load_lib_func(p, lld->flag);
+				if (!m) {
+					E("fail to call load_lib_func.");
+					return -1;
+				}
+			}
 		}
 	}
 

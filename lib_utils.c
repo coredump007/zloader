@@ -29,7 +29,7 @@ struct ldpath_data {
 static struct ldpath_data g_ldpath_data;
 
 static char *g_sopath[] = {
-	"/lib"
+	"/lib",
 	"/usr/lib",
 	"/system/lib",
 	NULL,
@@ -132,7 +132,9 @@ int locate_lib(const char *name, char *path)
 		strcat(buf, "/");
 		strcat(buf, name);
 
-		if (!stat(buf, &st) && S_ISREG(st.st_mode)) {
+		D("locate buf: %s", buf);
+
+		if (!lstat(buf, &st) && S_ISREG(st.st_mode)) {
 			strncpy(path, buf, PATH_MAX);
 
 			D("locate path: %s", path);
@@ -146,7 +148,9 @@ int locate_lib(const char *name, char *path)
 		strcat(buf, "/");
 		strcat(buf, name);
 
-		if (!stat(buf, &st) && S_ISREG(st.st_mode)) {
+		D("locate buf: %s", buf);
+
+		if (!lstat(buf, &st) && S_ISREG(st.st_mode)) {
 			strncpy(path, buf, PATH_MAX);
 
 			D("locate path: %s", path);
@@ -173,7 +177,7 @@ int open_lib(struct libinfo *lib, const char *name)
 	ldi->fd = open(name, O_RDONLY);
 	if (ldi->fd == -1) {
 		E("fail to open file.");
-
+		perror("open():");
 		return -1;
 	}
 

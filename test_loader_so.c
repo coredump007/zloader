@@ -1,6 +1,4 @@
-#include <stdio.h>
-
 int foo(int a, int b)
 {
-	return a + b;
+	return foo1(a, b);
 }
