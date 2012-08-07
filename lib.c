@@ -12,12 +12,26 @@
 #include "load.h"
 #include "lib.h"
 
-static LIST_HEAD(g_lib_list);
-
-struct load_lib_data local_load_lib_data = {
+static struct load_lib_data local_load_lib_data = {
 	.load_lib_func = load_library,
 	.flag = 0,
 };
+
+#define N_MAX_LDPATH 8
+
+struct ldpath_data {
+	char *ldpath[N_MAX_LDPATH + 1];
+	char *ldpath_string;
+};
+
+static struct ldpath_data g_ldpath_data;
+
+static char *sopath[] = {
+	"/usr/lib",
+	NULL,
+};
+
+static LIST_HEAD(g_lib_list);
 
 static int check_elf_header(const Elf32_Ehdr* hdr)
 {
@@ -132,6 +146,50 @@ static int make_linkinfo(struct libinfo *lib)
 	return 0;
 }
 
+static inline int check_init(void)
+{
+	struct ldpath_data *lp = &g_ldpath_data;
+
+	char *s, *p;
+	int i;
+
+	if (!g_load_lib_data)
+		g_load_lib_data = &local_load_lib_data;
+
+	if (!lp->ldpath_string) {
+		s = getenv("LD_LIBRARY_PATH");
+
+		lp->ldpath_string = strdup(s);
+		if (!lp->ldpath_string) {
+			E("fail to allocate memory.");
+			return -1;
+		}
+
+		s = p = lp->ldpath_string;
+
+		for (i = 0; i < N_MAX_LDPATH; i++) {
+			s = strchr(p, ':');
+			lp->ldpath[i] = p;
+
+			if (!s)
+				break;
+
+			*s = '\0';
+			s = s + 1;
+			p = s;
+		}
+
+		if (D_TAG(T_L_LDPATH)) {
+			DT(T_L_LDPATH, "LD_LIBRARY_PATH:");
+
+			for (i = 0; lp->ldpath[i] != NULL; i++)
+				DT(T_L_LDPATH, "%s", lp->ldpath[i]);
+		}
+	}
+
+	return;
+}
+
 void *load_library(const char *name, int flag)
 {
 	struct libinfo *lib;
@@ -139,6 +197,12 @@ void *load_library(const char *name, int flag)
 	int r;
 
 	D("Called.");
+
+	r = check_init();
+	if (r) {
+		E("fail to check init.");
+		return NULL;
+	}
 
 	lib = (struct libinfo *)calloc(1, sizeof(*lib));
 	if (!lib) {
@@ -164,8 +228,6 @@ void *load_library(const char *name, int flag)
 		return NULL;
 	}
 
-	if (!g_load_lib_data)
-		g_load_lib_data = &local_load_lib_data;
 
 	local_load_lib_data.flag = flag;
 
