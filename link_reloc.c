@@ -16,32 +16,32 @@ static unsigned elfhash(const char *_name)
 	return h;
 }
 
-static void dump_hash_table(soinfo_t *si)
+static void dump_hash_table(struct linkinfo *lki)
 {
 	int i;
 
-	DT(T_D_HASH, "si->hash_table: %p, si->nbucket: %u, si->nchain: %u,"
-			"si->bucket: %p, si->chain: %p.", si->hash_table,
-			si->nbucket, si->nchain, si->bucket, si->chain);
+	DT(T_D_HASH, "lki->hash_table: %p, lki->nbucket: %u, lki->nchain: %u,"
+			"lki->bucket: %p, lki->chain: %p.", lki->hash_table,
+			lki->nbucket, lki->nchain, lki->bucket, lki->chain);
 
 	DT(T_D_HASH, "Bucket:");
 
-	for (i = 0; i < si->nbucket; i++)
-		DT(T_D_HASH, "bucket[%d]: %u.", i, si->bucket[i]);
+	for (i = 0; i < lki->nbucket; i++)
+		DT(T_D_HASH, "bucket[%d]: %u.", i, lki->bucket[i]);
 
 	DT(T_D_HASH, "Chain:");
 
-	for (i = 0; i < si->nchain; i++)
-		DT(T_D_HASH, "chain[%d]: %u.", i, si->chain[i]);
+	for (i = 0; i < lki->nchain; i++)
+		DT(T_D_HASH, "chain[%d]: %u.", i, lki->chain[i]);
 
 	return;
 }
 
-static Elf32_Sym *do_sym_lookup(soinfo_t *si, const char *name)
+static Elf32_Sym *do_sym_lookup(struct linkinfo *lki, const char *name)
 {
-	Elf32_Sym *symtab = si->symtab;
+	Elf32_Sym *symtab = lki->symtab;
 
-	const char *strtab = si->strtab;
+	const char *strtab = lki->strtab;
 	unsigned hash = elfhash(name);
 
 	Elf32_Sym *s;
@@ -50,13 +50,13 @@ static Elf32_Sym *do_sym_lookup(soinfo_t *si, const char *name)
 	D("Called.");
 
 	if (D_TAG(T_D_HASH))
-		dump_hash_table(si);
+		dump_hash_table(lki);
 
 	DT(T_D_HASH, "name: %s.", name);
 	DT(T_D_HASH, "hash: %u.", hash);
-	DT(T_D_HASH, "bucket: %u.", hash % si->nbucket);
+	DT(T_D_HASH, "bucket: %u.", hash % lki->nbucket);
 
-	for(n = si->bucket[hash % si->nbucket]; n != 0; n = si->chain[n]){
+	for(n = lki->bucket[hash % lki->nbucket]; n != 0; n = lki->chain[n]){
 		s = symtab + n;
 
 		DT(T_D_HASH, "n: %u, string: %s.", n, strtab + s->st_name);
@@ -78,7 +78,7 @@ static Elf32_Sym *do_sym_lookup(soinfo_t *si, const char *name)
 	return NULL;
 }
 
-static int do_sym_relocation(soinfo_t *si, uint32_t type, uint32_t sym_addr, uint32_t target)
+static int do_sym_relocation(struct linkinfo *lki, uint32_t type, uint32_t sym_addr, uint32_t target)
 {
 	uint32_t *dst = (uint32_t *)target;
 
@@ -101,7 +101,7 @@ static int do_sym_relocation(soinfo_t *si, uint32_t type, uint32_t sym_addr, uin
 			break;
 
 		case R_386_RELATIVE:
-			*dst += (uint32_t)si->load_start;
+			*dst += (uint32_t)lki->load_start;
 			break;
 
 		case R_386_32:
@@ -122,7 +122,7 @@ static int do_sym_relocation(soinfo_t *si, uint32_t type, uint32_t sym_addr, uin
 	return r;
 }
 
-int do_relocation(soinfo_t *si, Elf32_Rel *rel, uint32_t count)
+int do_relocation(struct linkinfo *lki, Elf32_Rel *rel, uint32_t count)
 {
 	Elf32_Sym *sym;
 
@@ -140,15 +140,15 @@ int do_relocation(soinfo_t *si, Elf32_Rel *rel, uint32_t count)
 		type = ELF32_R_TYPE(rel[i].r_info);
 		sym_idx = ELF32_R_SYM(rel[i].r_info);
 
-		target = (rel[i].r_offset + si->load_bias);
+		target = (rel[i].r_offset + lki->load_bias);
 
 		if (sym_idx) {
-			sym_name = (char *)(si->strtab + si->symtab[sym_idx].st_name);
+			sym_name = (char *)(lki->strtab + lki->symtab[sym_idx].st_name);
 
-			sym = do_sym_lookup(si, sym_name);
+			sym = do_sym_lookup(lki, sym_name);
 			if (sym) {
-				sym_addr = (unsigned)(sym->st_value + si->load_bias);
-				r = do_sym_relocation(si, type, sym_addr, target);
+				sym_addr = (unsigned)(sym->st_value + lki->load_bias);
+				r = do_sym_relocation(lki, type, sym_addr, target);
 				if (r) {
 					return -1;
 				}

@@ -2,14 +2,14 @@
 #include "common.h"
 #include "link.h"
 
-int relocate_image(soinfo_t *si)
+int relocate_image(struct linkinfo *lki)
 {
 	int r = 0;
 
 	D("Called.");
 
-	if (si->plt_rel) {
-		r = do_relocation(si, si->plt_rel, si->n_plt_rel);
+	if (lki->plt_rel) {
+		r = do_relocation(lki, lki->plt_rel, lki->n_plt_rel);
 		if (r) {
 			E("fail to relocate plt rel.");
 			return -1;
@@ -18,8 +18,8 @@ int relocate_image(soinfo_t *si)
 
 	D("Called.");
 
-	if (si->rel) {
-		r = do_relocation(si, si->rel, si->n_rel);
+	if (lki->rel) {
+		r = do_relocation(lki, lki->rel, lki->n_rel);
 		if (r) {
 			E("fail to relocate rel");
 			return -1;
@@ -29,19 +29,19 @@ int relocate_image(soinfo_t *si)
 	return r;
 }
 
-int link_image(soinfo_t *si)
+int link_image(struct linkinfo *lki)
 {
 	int r;
 
 	D("Called.");
 
-	r = process_dyn_section(si);
+	r = process_dyn_section(lki);
 	if (r) {
 		E("fail to process dynamic section.");
 		return -1;
 	}
 
-	r = relocate_image(si);
+	r = relocate_image(lki);
 	if (r) {
 		E("fail to relocate image.");
 		return -1;

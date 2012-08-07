@@ -2,15 +2,13 @@
 #define LINK_H
 
 #include "common.h"
-#include "list.h"
 
 typedef void (*sc_func_t)(void);
-typedef void *(load_lib_func_t)(const char *, int);
 
-typedef struct {
+struct linkinfo {
 	int refcount;
 
-	Elf32_Phdr phdr[N_MAX_PHDR];
+	Elf32_Phdr *phdr[N_MAX_PHDR];
 	Elf32_Word n_phdr;
 
 	void *load_start;
@@ -46,11 +44,7 @@ typedef struct {
 	Elf32_Word n_preinit_func;
 	sc_func_t *preinit_func_array;
 
-	load_lib_func_t *load_lib;
-
 	int constructed;
-
-	struct list_head list;
-}soinfo_t;
+};
 
 #endif
