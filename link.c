@@ -56,3 +56,53 @@ int link_image(struct linkinfo *lki)
 
 	return 0;
 }
+
+void construct_image(struct linkinfo *lki)
+{
+	Elf32_Dyn *d;
+	sc_func_t *func;
+
+	struct linkinfo *l;
+
+	char *p;
+
+	int r;
+	int i;
+
+	D("Called.");
+
+	if (lki->b_constructed)
+		return;
+
+	D("Called.");
+
+	lki->b_constructed = 1;
+
+	if (lki->dyn_section) {
+		if (lki->n_dt_needed) {
+			for (i = 0; i < lki->n_dt_needed; i++) {
+				l = lki->dt_needed[i];
+				if (!check_magic(l->magic)) {
+					E("not a lininfo struct.");
+					continue;
+				}
+
+				construct_image(l);
+			}
+		}
+
+		if (lki->init_func) {
+			D("Call init func: %p.", lki->init_func);
+			lki->init_func();
+		}
+
+		if (lki->init_func_array) {
+			for (i = 0; i < lki->n_init_func; i++) {
+				D("Call init func arrary: %p.", lki->init_func_array[i]);
+				lki->init_func_array[i]();
+			}
+		}
+	}
+
+	return;
+}

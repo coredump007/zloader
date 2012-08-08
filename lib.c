@@ -27,15 +27,15 @@ void *load_library(const char *name, int flag)
 		return NULL;
 	}
 
-	lib = (struct libinfo *)calloc(1, sizeof(*lib));
-	if (!lib) {
-		E("fail to allocate memory.");
-		return NULL;
-	}
-
 	r = locate_lib(name, path);
 	if (r) {
 		E("fail to locate library: %s.", name);
+		return NULL;
+	}
+
+	lib = alloc_lib();
+	if (!lib) {
+		E("fail to allocate memory.");
 		return NULL;
 	}
 
@@ -63,11 +63,18 @@ void *load_library(const char *name, int flag)
 		return NULL;
 	}
 
-	INIT_LIST_HEAD(&lib->list);
-
 	list_add_tail(&lib->list, &g_lib_list);
 
 	D("Add library: %s", name);
 
-	return lib;
+	lib->refcount++;
+
+	return &lib->link;
+}
+
+int init_library(struct libinfo *lib)
+{
+	construct_image(&lib->link);
+
+	return 0;
 }

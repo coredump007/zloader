@@ -5,6 +5,8 @@
 #include "common.h"
 
 struct loadinfo {
+	unsigned long magic;
+
 	int fd;
 
 	Elf32_Ehdr ehdr;

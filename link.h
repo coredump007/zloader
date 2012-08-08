@@ -13,7 +13,7 @@ extern struct load_lib_data *g_load_lib_data;
 typedef void (*sc_func_t)(void);
 
 struct linkinfo {
-	int refcount;
+	unsigned long magic;
 
 	Elf32_Phdr *phdr[N_MAX_PHDR];
 	Elf32_Word n_phdr;
@@ -23,6 +23,9 @@ struct linkinfo {
 	Elf32_Word load_bias;
 
 	Elf32_Dyn *dyn_section;
+
+	unsigned long n_dt_needed;
+	struct linkinfo **dt_needed;
 
 	Elf32_Word *hash_table;
 	Elf32_Word nbucket;
@@ -39,8 +42,8 @@ struct linkinfo {
 	Elf32_Word n_rel;
 	Elf32_Rel *rel;
 
-	sc_func_t *init_func;
-	sc_func_t *fini_func;
+	sc_func_t init_func;
+	sc_func_t fini_func;
 
 	Elf32_Word n_init_func;
 	sc_func_t *init_func_array;
@@ -51,7 +54,7 @@ struct linkinfo {
 	Elf32_Word n_preinit_func;
 	sc_func_t *preinit_func_array;
 
-	int constructed;
+	int b_constructed;
 };
 
 #endif

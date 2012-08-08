@@ -1,6 +1,13 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#define LOADER_MAGIC 0xdeadbeef
+
+static inline int check_magic(unsigned long magic)
+{
+	return magic == LOADER_MAGIC;
+}
+
 #undef PAGE_MASK
 #undef PAGE_SIZE
 #define PAGE_SIZE 4096

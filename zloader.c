@@ -11,11 +11,16 @@ static pthread_mutex_t dl_lock = PTHREAD_MUTEX_INITIALIZER;
 void *zloader_dlopen(const char *filename, int flag)
 {
 	struct libinfo *lib;
+	struct linkinfo *lki;
 
 	D("Called.");
 
 	pthread_mutex_lock(&dl_lock);
-	lib = load_library(filename, flag);
+	lki = load_library(filename, flag);
+	if (lki) {
+		lib = container_of(lki, struct libinfo, link);
+		init_library(lib);
+	}
 	pthread_mutex_unlock(&dl_lock);
 	return lib;
 }

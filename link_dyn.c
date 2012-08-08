@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "debug.h"
 #include "common.h"
 #include "link.h"
@@ -20,6 +22,32 @@ static int is_excluded_lib(const char *name)
 	return 0;
 }
 
+static int alloc_dt_needed(struct linkinfo *lki)
+{
+	unsigned long s;
+	int i;
+
+	void *p;
+
+	s = sizeof(struct linkinfo *) * lki->n_dt_needed;
+	s += sizeof(struct linkinfo) * lki->n_dt_needed;
+
+	p = calloc(1, s);
+	if (!p) {
+		E("fail to allocate memory.");
+		return -1;
+	}
+
+	lki->dt_needed = p;
+
+	p += sizeof(struct linkinfo *) * lki->n_dt_needed;
+
+	for (i = 0; i < lki->n_dt_needed; i++, p += sizeof(struct linkinfo))
+		lki->dt_needed[i] = p;
+
+	return 0;
+}
+
 int process_dyn_section(struct linkinfo *lki)
 {
 	struct load_lib_data *lld = g_load_lib_data;
@@ -27,10 +55,10 @@ int process_dyn_section(struct linkinfo *lki)
 	const Elf32_Phdr* phdr;
 	const Elf32_Dyn *d;
 
-	int b_dt_needed = 0;
+	struct linkinfo *l;
 
 	char *p;
-	void *m;
+	int r;
 	int i;
 
 	lki->dyn_section = NULL;
@@ -51,7 +79,7 @@ int process_dyn_section(struct linkinfo *lki)
 	for (d = lki->dyn_section; d->d_tag; d++) {
 		switch (d->d_tag) {
 			case DT_NEEDED:
-				b_dt_needed = 1;
+				lki->n_dt_needed++;
 				break;
 
 			case DT_HASH:
@@ -130,13 +158,13 @@ int process_dyn_section(struct linkinfo *lki)
 			case DT_INIT:
 				D("DT_INIT.");
 
-				lki->init_func = (sc_func_t *)(lki->load_bias + d->d_un.d_ptr);
+				lki->init_func = (sc_func_t)(lki->load_bias + d->d_un.d_ptr);
 				break;
 
 			case DT_FINI:
 				D("DT_FINI.");
 
-				lki->fini_func = (sc_func_t *)(lki->load_bias + d->d_un.d_ptr);
+				lki->fini_func = (sc_func_t)(lki->load_bias + d->d_un.d_ptr);
 				break;
 
 			case DT_INIT_ARRAY:
@@ -182,8 +210,17 @@ int process_dyn_section(struct linkinfo *lki)
 		}
 	}
 
-	if (b_dt_needed) {
-		for (d = lki->dyn_section; d->d_tag; d++) {
+	if (lki->n_dt_needed) {
+		D("n_dt_needed: %lu", lki->n_dt_needed);
+
+		r = alloc_dt_needed(lki);
+		if (r) {
+			E("fail to alloc dt needed section.");
+			return -1;
+		}
+
+
+		for (i = 0, d = lki->dyn_section; d->d_tag; d++) {
 			if (d->d_tag == DT_NEEDED) {
 				if (!lld) {
 					E("load_lib_data is not initialized.");
@@ -195,13 +232,21 @@ int process_dyn_section(struct linkinfo *lki)
 				if (is_excluded_lib(p))
 					continue;
 
-				m = lld->load_lib_func(p, lld->flag);
-				if (!m) {
+				l = lld->load_lib_func(p, lld->flag);
+				if (!l) {
 					E("fail to call load_lib_func.");
 					return -1;
 				}
+
+				lki->dt_needed[i] = l;
+
+				i++;
 			}
 		}
+
+		lki->n_dt_needed = i;
+
+		D("n_dt_needed loaded: %lu", lki->n_dt_needed);
 	}
 
 	return 0;

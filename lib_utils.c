@@ -35,7 +35,7 @@ static char *g_sopath[] = {
 	NULL,
 };
 
-int init_ldpath(void)
+static int init_ldpath(void)
 {
 	struct ldpath_data *lp = &g_ldpath_data;
 
@@ -93,7 +93,7 @@ int check_init(void)
 	return 0;
 }
 
-int check_elf_header(const Elf32_Ehdr* hdr)
+static int check_elf_header(const Elf32_Ehdr* hdr)
 {
 	D("Called.");
 
@@ -105,6 +105,44 @@ int check_elf_header(const Elf32_Ehdr* hdr)
 	D("Called.");
 
 	return 0;
+}
+
+struct libinfo *alloc_lib(void)
+{
+	struct libinfo *lib;
+
+	lib = (struct libinfo *)calloc(1, sizeof(*lib));
+	if (!lib) {
+		E("fail to allocate memory.");
+		return NULL;
+	}
+
+	lib->magic = LOADER_MAGIC;
+	lib->refcount = 0;
+
+	INIT_LIST_HEAD(&lib->list);
+
+	return lib;
+}
+
+void free_lib(struct libinfo *lib)
+{
+	int r;
+
+	if (!check_magic(lib->magic)) {
+		E("not a libinfo handle.");
+		return;
+	}
+
+	if (lib->refcount) {
+		E("free libinfo with refcount.");
+		return;
+	}
+
+	free(lib);
+	lib = NULL;
+
+	return;
 }
 
 int locate_lib(const char *name, char *path)
@@ -173,6 +211,8 @@ int open_lib(struct libinfo *lib, const char *name)
 	D("Called.");
 
 	memset(ldi, 0, sizeof(*ldi));
+
+	ldi->magic = LOADER_MAGIC;
 
 	ldi->fd = open(name, O_RDONLY);
 	if (ldi->fd == -1) {
@@ -249,11 +289,12 @@ int make_linkinfo(struct libinfo *lib)
 
 	D("Called.");
 
+	lki->magic = LOADER_MAGIC;
 	lki->load_start = ldi->load_start;
 	lki->load_bias = ldi->load_bias;
 	lki->load_size = ldi->load_size;
 	lki->n_phdr = ldi->ehdr.e_phnum;
-	lki->constructed = 0;
+	lki->b_constructed = 0;
 
 	for (i = 0; i < lki->n_phdr; i++)
 		lki->phdr[i] = ldi->phdr + i;
