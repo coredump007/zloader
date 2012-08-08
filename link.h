@@ -57,4 +57,6 @@ struct linkinfo {
 	int b_constructed;
 };
 
+Elf32_Sym *sym_lookup(struct linkinfo *lki, const char *name);
+
 #endif
