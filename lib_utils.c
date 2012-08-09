@@ -280,7 +280,7 @@ void close_lib(struct libinfo *lib)
 	return;
 }
 
-int make_linkinfo(struct libinfo *lib)
+int setup_linkinfo(struct libinfo *lib)
 {
 	struct linkinfo *lki = &lib->link;
 	struct loadinfo *ldi = &lib->load;
@@ -288,6 +288,9 @@ int make_linkinfo(struct libinfo *lib)
 	int i;
 
 	D("Called.");
+
+	INIT_LIST_HEAD(&lki->dt_needed_head);
+	INIT_LIST_HEAD(&lki->dt_needed_list);
 
 	lki->magic = LOADER_MAGIC;
 	lki->load_start = ldi->load_start;

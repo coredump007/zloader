@@ -2,6 +2,7 @@
 #define LINK_H
 
 #include "common.h"
+#include "list.h"
 
 struct load_lib_data {
 	void *(*load_lib_func)(const char *, int);
@@ -25,7 +26,8 @@ struct linkinfo {
 	Elf32_Dyn *dyn_section;
 
 	unsigned long n_dt_needed;
-	struct linkinfo **dt_needed;
+	struct list_head dt_needed_head;
+	struct list_head dt_needed_list;
 
 	Elf32_Word *hash_table;
 	Elf32_Word nbucket;

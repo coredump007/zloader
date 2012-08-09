@@ -22,32 +22,6 @@ static int is_excluded_lib(const char *name)
 	return 0;
 }
 
-static int alloc_dt_needed(struct linkinfo *lki)
-{
-	unsigned long s;
-	int i;
-
-	void *p;
-
-	s = sizeof(struct linkinfo *) * lki->n_dt_needed;
-	s += sizeof(struct linkinfo) * lki->n_dt_needed;
-
-	p = calloc(1, s);
-	if (!p) {
-		E("fail to allocate memory.");
-		return -1;
-	}
-
-	lki->dt_needed = p;
-
-	p += sizeof(struct linkinfo *) * lki->n_dt_needed;
-
-	for (i = 0; i < lki->n_dt_needed; i++, p += sizeof(struct linkinfo))
-		lki->dt_needed[i] = p;
-
-	return 0;
-}
-
 int process_dyn_section(struct linkinfo *lki)
 {
 	struct load_lib_data *lld = g_load_lib_data;
@@ -213,13 +187,6 @@ int process_dyn_section(struct linkinfo *lki)
 	if (lki->n_dt_needed) {
 		D("n_dt_needed: %lu", lki->n_dt_needed);
 
-		r = alloc_dt_needed(lki);
-		if (r) {
-			E("fail to alloc dt needed section.");
-			return -1;
-		}
-
-
 		for (i = 0, d = lki->dyn_section; d->d_tag; d++) {
 			if (d->d_tag == DT_NEEDED) {
 				if (!lld) {
@@ -238,7 +205,7 @@ int process_dyn_section(struct linkinfo *lki)
 					return -1;
 				}
 
-				lki->dt_needed[i] = l;
+				list_add_tail(&l->dt_needed_list, &lki->dt_needed_head);
 
 				i++;
 			}

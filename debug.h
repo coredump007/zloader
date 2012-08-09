@@ -1,7 +1,7 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
-#define DEBUG_TAG	(T_L_LDPATH | T_D_HASH)
+#define DEBUG_TAG	(T_L_LDPATH)
 
 #include <stdio.h>
 

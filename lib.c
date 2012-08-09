@@ -51,7 +51,7 @@ void *load_library(const char *name, int flag)
 		return NULL;
 	}
 
-	r = make_linkinfo(lib);
+	r = setup_linkinfo(lib);
 	if (r) {
 		E("fail to make linkinfo.");
 		return NULL;

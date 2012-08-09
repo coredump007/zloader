@@ -1,5 +1,6 @@
 #include "debug.h"
 #include "common.h"
+#include "list.h"
 #include "link.h"
 
 struct load_lib_data *g_load_lib_data;
@@ -63,6 +64,7 @@ void construct_image(struct linkinfo *lki)
 	sc_func_t *func;
 
 	struct linkinfo *l;
+	struct list_head *pos;
 
 	char *p;
 
@@ -80,8 +82,8 @@ void construct_image(struct linkinfo *lki)
 
 	if (lki->dyn_section) {
 		if (lki->n_dt_needed) {
-			for (i = 0; i < lki->n_dt_needed; i++) {
-				l = lki->dt_needed[i];
+			list_for_each(pos, &lki->dt_needed_head) {
+				l = container_of(pos, struct linkinfo, dt_needed_list);
 				if (!check_magic(l->magic)) {
 					E("not a lininfo struct.");
 					continue;

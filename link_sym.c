@@ -73,7 +73,7 @@ Elf32_Sym *sym_lookup(struct linkinfo *lki, const char *name)
 		}
 	}
 
-	D("Called.");
+	D("Not found: %s.", name);
 
 	return NULL;
 }

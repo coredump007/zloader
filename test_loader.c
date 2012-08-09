@@ -23,7 +23,7 @@ int main(void)
 
 	r = foo_func(1, 1);
 
-	fprintf(stderr, "Result: %d.\n", r);
+	fprintf(stderr, "Result: foo1: %d.\n", r);
 
 	return 0;
 }
