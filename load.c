@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <elf.h>
 #include <sys/mman.h>
@@ -7,6 +8,51 @@
 #include "common.h"
 #include "debug.h"
 #include "load.h"
+
+static int setup_vma(struct loadinfo *ldi)
+{
+	Elf32_Ehdr *ehdr = &ldi->ehdr;
+
+	int n = 0;
+
+	void *m;
+
+	unsigned long s;
+	int i;
+
+	for (i = 0; i < ehdr->e_phnum; i++) {
+		const Elf32_Phdr* phdr = &ldi->phdr[i];
+
+		if (phdr->p_type != PT_LOAD)
+			continue;
+
+		n++;
+	}
+
+	n *= 2;
+
+	s = sizeof(struct vma *) * n;
+	s += sizeof(struct vma) * n;
+
+	m = calloc(1, s);
+	if (!m) {
+		E("fail to allocate memory.");
+		return -1;
+	}
+
+	ldi->n_vma = n;
+	ldi->vma = m;
+
+	m += n * sizeof(struct vma *);
+
+	for (i = 0; i < n; i++) {
+		ldi->vma[i] = m;
+
+		m += sizeof(struct vma);
+	}
+
+	return 0;
+}
 
 static Elf32_Addr calc_load_size(struct loadinfo *ldi)
 {
@@ -58,6 +104,8 @@ static int map_image(struct loadinfo *ldi)
 	Elf32_Addr m_start, m_end, mp_start, mp_end;
 	Elf32_Addr f_start, f_end, fp_start, fp_end;
 	Elf32_Addr mf_end;
+
+	int n_vma = 0;
 
 	void *m;
 
@@ -114,6 +162,12 @@ static int map_image(struct loadinfo *ldi)
 			return -1;
 		}
 
+		ldi->vma[n_vma]->used = 1;
+		ldi->vma[n_vma]->area = m;
+		ldi->vma[n_vma]->size = s;
+
+		n_vma++;
+
 		D("Map SEG p_vaddr: 0x%x to %p",
 			phdr->p_vaddr, m);
 
@@ -134,6 +188,12 @@ static int map_image(struct loadinfo *ldi)
 				E("fail to map segments.");
 				return -1;
 			}
+
+			ldi->vma[n_vma]->used = 1;
+			ldi->vma[n_vma]->area = m;
+			ldi->vma[n_vma]->size = s;
+
+			n_vma++;
 		}
 	}
 
@@ -145,6 +205,12 @@ int load_image(struct loadinfo *ldi)
 	int r;
 
 	D("Called.");
+
+	r = setup_vma(ldi);
+	if (r) {
+		E("fail to setup vma.");
+		return -1;
+	}
 
 	r = calc_load_size(ldi);
 	if (r) {

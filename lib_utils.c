@@ -200,6 +200,17 @@ int locate_lib(const char *name, char *path)
 	return -1;
 }
 
+ssize_t inline safe_read(int fd, void *buf, size_t count)
+{
+	ssize_t r;
+
+	do {
+		r = read(fd, buf, count);
+	}while (r == -1 && errno == -EINTR);
+
+	return r;
+}
+
 int open_lib(struct libinfo *lib, const char *name)
 {
 	struct loadinfo *ldi = &lib->load;
@@ -223,10 +234,7 @@ int open_lib(struct libinfo *lib, const char *name)
 
 	D("Called.");
 
-	do {
-		r = read(ldi->fd, ehdr, sizeof(*ehdr));
-	}while (r == -1 && errno == -EINTR);
-
+	r = safe_read(ldi->fd, ehdr, sizeof(*ehdr));
 	if (r != sizeof(*ehdr)) {
 		E("fail to read ELF header.");
 
@@ -249,10 +257,7 @@ int open_lib(struct libinfo *lib, const char *name)
 
 	lseek(ldi->fd, SEEK_SET, ehdr->e_phoff);
 
-	do {
-		r = read(ldi->fd, ldi->phdr, ehdr->e_phnum * sizeof(Elf32_Phdr));
-	}while (r == -1 && errno == -EINTR);
-
+	r = safe_read(ldi->fd, ldi->phdr, ehdr->e_phnum * sizeof(Elf32_Phdr));
 	if (r != (ehdr->e_phnum * sizeof(Elf32_Phdr))) {
 		E("Can not support more than %d PHDR.", N_MAX_PHDR);
 		goto fail;

@@ -1,8 +1,14 @@
 #ifndef LOAD_H
 #define LOAD_H
 
-#include <elf.h>
 #include "common.h"
+
+struct vma {
+	int used;
+
+	void *area;
+	Elf32_Word size;
+};
 
 struct loadinfo {
 	unsigned long magic;
@@ -18,6 +24,9 @@ struct loadinfo {
 	void *load_start;
 	Elf32_Word load_size;
 	Elf32_Word load_bias;
+
+	int n_vma;
+	struct vma **vma;
 };
 
 #endif
